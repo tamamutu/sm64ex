@@ -11,6 +11,13 @@
 #include "configfile.h"
 #include "platform.h"
 
+#if !defined(HAVE_SDL2) && !defined(CLOCK_MONOTONIC)
+#include <sys/time.h>
+#elif defined(HAVE_SDL2)
+// we can just ask SDL for most of this shit if we have it
+#include <SDL2/SDL.h>
+#endif
+
 /* NULL terminated list of platform specific read-only data paths */
 /* priority is top first */
 const char *sys_ropaths[] = {
@@ -75,10 +82,20 @@ void sys_sleep(const uint64_t us) {
 
 // A high-resolution profiling timer. Returns the current time in microseconds.
 double sys_profile_time(void) {
-    // TODO: Platform specific stuff
+#if defined(HAVE_SDL2)
+    static double freq = 0.0;
+    if (freq == 0.0)
+        freq = (double)SDL_GetPerformanceFrequency() / 1000000.0;
+    return (double)SDL_GetPerformanceCounter() / freq;
+#elif defined(CLOCK_MONOTONIC)
     struct timespec tv;
     clock_gettime(CLOCK_MONOTONIC, &tv);
-    return (double)(tv.tv_nsec) / 1000.0 + (double)(tv.tv_sec) * 1000000.0;
+    return (double)tv.tv_nsec / 1000.0 + (double)tv.tv_sec * 1000000.0;
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (double)tv.tv_usec + (double)tv.tv_sec * 1000000.0;
+#endif
 }
 
 /* this calls a platform-specific impl function after forming the error message */
@@ -96,9 +113,6 @@ void sys_fatal(const char *fmt, ...) {
 }
 
 #ifdef HAVE_SDL2
-
-// we can just ask SDL for most of this shit if we have it
-#include <SDL2/SDL.h>
 
 // TEMPORARY: check the old save folder and copy contents to the new path
 // this will be removed after a while
