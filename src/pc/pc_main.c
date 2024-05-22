@@ -163,7 +163,8 @@ void* audio_thread() {
         set_sequence_player_volume(SEQ_PLAYER_SFX, (f32)configSfxVolume / 127.0f * master_mod);
         set_sequence_player_volume(SEQ_PLAYER_ENV, (f32)configEnvVolume / 127.0f * master_mod);
 
-        int samples_left = audio_api->buffered();
+        int samples_left = audio_api->buffered() - (audio_api->get_desired_buffered() * configAudioRunahead);
+        if (samples_left < 0) samples_left = 0;
         u32 num_audio_samples = samples_left < audio_api->get_desired_buffered() ? SAMPLES_HIGH : SAMPLES_LOW;
         // printf("Audio samples: %d %u\n", samples_left, num_audio_samples);
         s16 audio_buffer[SAMPLES_HIGH * 2];
@@ -191,7 +192,7 @@ void* audio_thread() {
         end_time = sys_profile_time();
 
         // Sleep for the remaining time
-        f64 nap_time = frametime_micro - (end_time - start_time);
+        f64 nap_time = (frametime_micro - (end_time - start_time)) * configAudioSleep;
         // printf("Audio thread nap time: %f\n", nap_time);
         if (nap_time > 0.0) sys_sleep(nap_time);
 
