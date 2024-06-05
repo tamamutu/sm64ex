@@ -13,7 +13,6 @@
 #include "seq_ids.h"
 #include "dialog_ids.h"
 #include "level_table.h"
-#include "pc/pc_main.h"
 
 #ifdef VERSION_EU
 #define EU_FLOAT(x) x ## f
@@ -775,7 +774,6 @@ void create_next_audio_buffer(s16 *samples, u32 num_samples) {
         update_game_sound();
         sGameLoopTicked = 0;
     }
-
     s32 writtenCmds;
     synthesis_execute(gAudioCmdBuffers[0], &writtenCmds, samples, num_samples);
     gAudioRandom = ((gAudioRandom + gAudioFrameCount) * gAudioFrameCount);
@@ -2350,10 +2348,6 @@ void sound_reset(u8 presetId) {
         sUnused8033323C = 0;
     }
 #endif
-    // Wait for audio thread to finish rendering
-    pc_wait_for_audio();
-    pc_request_gameloop_wait();
-
     sGameLoopTicked = 0;
     disable_all_sequence_players();
     sound_init();
